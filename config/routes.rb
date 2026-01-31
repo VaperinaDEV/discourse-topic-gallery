@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
-MyPluginModule::Engine.routes.draw do
-  get "/examples" => "examples#index"
-  # define routes here
+DiscourseTopicGallery::Engine.routes.draw do
+  get "/:topic_id" => "topic_gallery#show", :constraints => { topic_id: /\d+/ }
 end
 
-Discourse::Application.routes.draw { mount ::MyPluginModule::Engine, at: "my-plugin" }
+Discourse::Application.routes.draw do
+  mount ::DiscourseTopicGallery::Engine, at: "topic-gallery"
+end

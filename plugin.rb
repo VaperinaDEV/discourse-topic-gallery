@@ -1,21 +1,36 @@
 # frozen_string_literal: true
 
-# name: discourse-plugin-name
+# name: discourse-topic-gallery
 # about: TODO
 # meta_topic_id: TODO
 # version: 0.0.1
-# authors: Discourse
+# authors: Canapin & AI
 # url: TODO
 # required_version: 2.7.0
 
-enabled_site_setting :plugin_name_enabled
+enabled_site_setting :topic_gallery_enabled
 
-module ::MyPluginModule
-  PLUGIN_NAME = "discourse-plugin-name"
+register_asset "stylesheets/topic-gallery.scss"
+
+module ::DiscourseTopicGallery
+  PLUGIN_NAME = "discourse_topic_gallery"
 end
 
-require_relative "lib/my_plugin_module/engine"
-
 after_initialize do
-  # Code which should run after Rails has finished booting
+  require_dependency File.expand_path(
+    "../app/controllers/discourse_topic_gallery/topic_gallery_controller.rb",
+    __FILE__,
+  )
+
+  Discourse::Application.routes.prepend do
+    get "t/:slug/:topic_id/gallery" => "topics#show", :constraints => { topic_id: /\d+/ }
+    get "t/:topic_id/gallery" => "topics#show", :constraints => { topic_id: /\d+/ }
+  end
+
+  Discourse::Application.routes.append do
+    get "/topic-gallery/:topic_id" => "discourse_topic_gallery/topic_gallery#show",
+        :constraints => {
+          topic_id: /\d+/,
+        }
+  end
 end

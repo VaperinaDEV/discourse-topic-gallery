@@ -1,0 +1,68 @@
+# frozen_string_literal: true
+
+module DiscourseTopicGallery
+  class TopicGalleryController < ::ApplicationController
+    requires_plugin PLUGIN_NAME
+
+    def show
+      topic = Topic.find_by(id: params[:topic_id])
+      raise Discourse::NotFound unless topic
+      guardian.ensure_can_see!(topic)
+
+      visible_posts = visible_posts_scope(topic)
+      visible_post_ids = visible_posts.pluck(:id).to_set
+
+      uploads =
+        Upload
+          .joins(:posts)
+          .where(posts: { id: visible_post_ids })
+          .where("uploads.width IS NOT NULL AND uploads.height IS NOT NULL")
+          .includes(:user, :optimized_images, :posts)
+          .distinct
+          .order("posts.post_number ASC")
+
+      images = serialize_uploads(uploads.to_a, topic, visible_post_ids)
+
+      render json: { title: topic.title, slug: topic.slug, id: topic.id, images: images }
+    end
+
+    private
+
+    def visible_posts_scope(topic)
+      allowed_types = [Post.types[:regular]]
+      allowed_types << Post.types[:whisper] if guardian.can_see_whispers?
+
+      scope =
+        Post
+          .where(topic_id: topic.id)
+          .where(deleted_at: nil)
+          .where(hidden: false)
+          .where(post_type: allowed_types)
+
+      if current_user
+        ignored_ids = IgnoredUser.where(user_id: current_user.id).select(:ignored_user_id)
+        scope = scope.where.not(user_id: ignored_ids) if ignored_ids.exists?
+      end
+
+      scope
+    end
+
+    def serialize_uploads(uploads, topic, visible_post_ids)
+      uploads.map do |upload|
+        post = upload.posts.find { |p| p.topic_id == topic.id && visible_post_ids.include?(p.id) }
+        optimized = OptimizedImage.create_for(upload, 400, 400)
+        thumbnail_raw_url = optimized&.url || upload.url
+
+        {
+          id: upload.id,
+          thumbnailUrl: UrlHelper.cook_url(thumbnail_raw_url, secure: upload.secure?, local: true),
+          url: UrlHelper.cook_url(upload.url, secure: upload.secure?, local: true),
+          username: upload.user&.username,
+          postId: post&.id,
+          postNumber: post&.post_number,
+          postUrl: post ? "/t/#{topic.slug}/#{topic.id}/#{post.post_number}" : nil,
+        }
+      end
+    end
+  end
+end
