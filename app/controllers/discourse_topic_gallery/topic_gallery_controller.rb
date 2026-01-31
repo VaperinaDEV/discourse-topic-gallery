@@ -43,25 +43,35 @@ module DiscourseTopicGallery
         visible_posts = visible_posts.where("posts.created_at <= ?", to.end_of_day) if to
       end
 
-      visible_post_ids = visible_posts.pluck(:id).to_set
+      visible_posts_sub = visible_posts.select(:id)
 
       all_uploads =
         Upload
           .joins(:posts)
-          .where(posts: { id: visible_post_ids })
-          .where("uploads.width IS NOT NULL AND uploads.height IS NOT NULL")
+          .where(posts: { id: visible_posts_sub })
+          .where.not(uploads: { width: nil })
+          .where.not(uploads: { height: nil })
           .distinct
 
       total = all_uploads.count
 
       uploads =
         all_uploads
-          .includes(:user, :optimized_images, :posts)
+          .includes(:user, :optimized_images)
           .order("posts.post_number ASC")
           .offset(page * PAGE_SIZE)
           .limit(PAGE_SIZE)
+          .to_a
 
-      images = serialize_uploads(uploads.to_a, topic, visible_post_ids)
+      upload_ids = uploads.map(&:id)
+      post_by_upload =
+        PostUpload
+          .joins(:post)
+          .where(upload_id: upload_ids, post: { id: visible_posts_sub })
+          .includes(:post)
+          .index_by(&:upload_id)
+
+      images = serialize_uploads(uploads, topic, post_by_upload)
 
       render json: {
                title: topic.title,
@@ -95,9 +105,9 @@ module DiscourseTopicGallery
       scope
     end
 
-    def serialize_uploads(uploads, topic, visible_post_ids)
+    def serialize_uploads(uploads, topic, post_by_upload)
       uploads.map do |upload|
-        post = upload.posts.find { |p| p.topic_id == topic.id && visible_post_ids.include?(p.id) }
+        post = post_by_upload[upload.id]&.post
         thumb_w = upload.thumbnail_width || upload.width
         thumb_h = upload.thumbnail_height || upload.height
         optimized = OptimizedImage.create_for(upload, thumb_w, thumb_h)
