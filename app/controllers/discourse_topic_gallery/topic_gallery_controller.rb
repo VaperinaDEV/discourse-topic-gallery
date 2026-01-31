@@ -20,12 +20,22 @@ module DiscourseTopicGallery
       end
 
       if params[:from_date].present?
-        from = Date.parse(params[:from_date]) rescue nil
+        from =
+          begin
+            Date.parse(params[:from_date])
+          rescue StandardError
+            nil
+          end
         visible_posts = visible_posts.where("posts.created_at >= ?", from.beginning_of_day) if from
       end
 
       if params[:to_date].present?
-        to = Date.parse(params[:to_date]) rescue nil
+        to =
+          begin
+            Date.parse(params[:to_date])
+          rescue StandardError
+            nil
+          end
         visible_posts = visible_posts.where("posts.created_at <= ?", to.end_of_day) if to
       end
 

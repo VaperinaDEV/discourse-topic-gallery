@@ -5,19 +5,35 @@
   box-sizing: border-box;
 
   .topic-gallery-header {
-    margin-bottom: 2rem;
-    padding: 0 10px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
 
     h1 {
-      margin: 0 0 0.5rem 0;
-      font-size: 2rem;
-      color: var(--primary);
+      margin: 0;
+      font-size: var(--font-up-3);
+      line-height: 1.2;
     }
 
-    .image-count {
-      color: var(--primary-medium);
+    .topic-back-link {
+      color: var(--primary);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
+
+      .d-icon {
+        font-size: 0.65em;
+        color: var(--tertiary);
+      }
+    }
+
+    .image-count-badge {
       font-size: var(--font-down-1);
-      margin: 0;
+      color: var(--primary-medium);
+      white-space: nowrap;
     }
   }
 

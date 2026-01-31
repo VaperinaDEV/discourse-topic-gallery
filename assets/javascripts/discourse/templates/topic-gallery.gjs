@@ -1,5 +1,6 @@
 import { hash } from "@ember/helper";
 import DatePicker from "discourse/components/date-picker";
+import icon from "discourse/helpers/d-icon";
 import EmailGroupUserChooser from "discourse/select-kit/components/email-group-user-chooser";
 import { i18n } from "discourse-i18n";
 import TopicGalleryGrid from "../components/topic-gallery-grid";
@@ -7,11 +8,17 @@ import TopicGalleryGrid from "../components/topic-gallery-grid";
 <template>
   <div class="topic-gallery-page">
     <div class="topic-gallery-header">
-      <h1>{{@model.title}}</h1>
-      <p class="image-count">{{@controller.total}}
-        {{i18n "discourse_topic_gallery.images"}}</p>
+      <h1 data-topic-id={{@model.id}}>
+        <a
+          href="/t/{{@model.slug}}/{{@model.id}}"
+          class="topic-back-link"
+        >{{icon "chevron-left"}}{{@model.title}}</a>
+      </h1>
+      <span class="image-count-badge">
+        -
+        {{@controller.total}}
+        {{i18n "discourse_topic_gallery.images"}}</span>
     </div>
-
     <div class="admin-controls">
       <div class="control-unit">
         <label>{{i18n "discourse_topic_gallery.filter_by_user"}}</label>

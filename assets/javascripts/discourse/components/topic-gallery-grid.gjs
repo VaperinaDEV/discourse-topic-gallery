@@ -59,7 +59,7 @@ export default class TopicGalleryGrid extends Component {
                 <a
                   href={{image.postUrl}}
                   class="gallery-post-link"
-                >#{{image.id}}</a>
+                >#{{image.postNumber}}</a>
               </div>
             </div>
           {{/each}}
