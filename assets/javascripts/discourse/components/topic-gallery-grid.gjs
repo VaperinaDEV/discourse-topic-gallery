@@ -1,6 +1,8 @@
 import Component from "@glimmer/component";
+import { service } from "@ember/service";
 import { modifier } from "ember-modifier";
 import lightbox from "discourse/lib/lightbox";
+import DiscourseURL from "discourse/lib/url";
 
 function applyGroupBorders(grid) {
   const cards = Array.from(grid.querySelectorAll(".gallery-card"));
@@ -36,6 +38,8 @@ function applyGroupBorders(grid) {
 }
 
 export default class TopicGalleryGrid extends Component {
+  @service router;
+
   observer = null;
 
   sentinel = modifier((element) => {
@@ -96,8 +100,22 @@ export default class TopicGalleryGrid extends Component {
       }
     };
 
+    const onClick = (e) => {
+      const link = e.target.closest("a.gallery-post-link, a.gallery-author");
+      if (!link) {
+        return;
+      }
+      const href = link.getAttribute("href");
+      if (href && DiscourseURL.isInternal(href)) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.router.transitionTo(href);
+      }
+    };
+
     element.addEventListener("mouseover", onOver);
     element.addEventListener("mouseleave", onLeave);
+    element.addEventListener("click", onClick);
 
     run();
     lightbox(element);
@@ -107,6 +125,7 @@ export default class TopicGalleryGrid extends Component {
       resizeObserver.disconnect();
       element.removeEventListener("mouseover", onOver);
       element.removeEventListener("mouseleave", onLeave);
+      element.removeEventListener("click", onClick);
     };
   });
 
