@@ -23,8 +23,10 @@ after_initialize do
                      )
 
   Discourse::Application.routes.prepend do
-    get "t/:slug/:topic_id/gallery" => "topics#show", :constraints => { topic_id: /\d+/ }
-    get "t/:topic_id/gallery" => "topics#show", :constraints => { topic_id: /\d+/ }
+    constraints(->(req) { !req.path.end_with?(".json") }) do
+      get "t/:slug/:topic_id/gallery" => "topics#show", :constraints => { topic_id: /\d+/ }
+      get "t/:topic_id/gallery" => "topics#show", :constraints => { topic_id: /\d+/ }
+    end
   end
 
   add_to_serializer(:current_user, :can_view_topic_gallery) do
@@ -32,9 +34,10 @@ after_initialize do
   end
 
   Discourse::Application.routes.append do
-    get "/topic-gallery/:topic_id" => "discourse_topic_gallery/topic_gallery#show",
-        :constraints => {
-          topic_id: /\d+/,
-        }
+    scope constraints: { topic_id: /\d+/ } do
+      get "/topic-gallery/:topic_id" => "discourse_topic_gallery/topic_gallery#show"
+      get "t/:slug/:topic_id/gallery" => "discourse_topic_gallery/topic_gallery#show"
+      get "t/:topic_id/gallery" => "discourse_topic_gallery/topic_gallery#show"
+    end
   end
 end
