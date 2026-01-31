@@ -3,6 +3,7 @@ import { service } from "@ember/service";
 import { modifier } from "ember-modifier";
 import lightbox from "discourse/lib/lightbox";
 import DiscourseURL from "discourse/lib/url";
+import { i18n } from "discourse-i18n";
 
 function applyGroupBorders(grid) {
   const cards = Array.from(grid.querySelectorAll(".gallery-card"));
@@ -182,7 +183,7 @@ export default class TopicGalleryGrid extends Component {
         {{/if}}
       {{else}}
         <div class="no-images-message">
-          <p>No images found in this topic.</p>
+          <p>{{i18n "discourse_topic_gallery.no_images_found"}}</p>
         </div>
       {{/if}}
     </div>

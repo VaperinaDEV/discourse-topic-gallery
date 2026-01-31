@@ -1,5 +1,6 @@
 import { hash } from "@ember/helper";
 import { on } from "@ember/modifier";
+import DButton from "discourse/components/d-button";
 import DatePicker from "discourse/components/date-picker";
 import icon from "discourse/helpers/d-icon";
 import UserChooser from "discourse/select-kit/components/email-group-user-chooser";
@@ -50,6 +51,18 @@ import TopicGalleryGrid from "../components/topic-gallery-grid";
           @onSelect={{@controller.updateToDate}}
         />
       </div>
+
+      {{#if @controller.hasFilters}}
+        <div class="control-unit">
+          <label>&#8203;</label>
+          <DButton
+            @action={{@controller.clearFilters}}
+            @icon="xmark"
+            @label="discourse_topic_gallery.clear_filters"
+            class="btn-default clear-filters-btn"
+          />
+        </div>
+      {{/if}}
     </div>
 
     <TopicGalleryGrid

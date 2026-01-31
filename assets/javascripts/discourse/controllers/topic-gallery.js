@@ -64,6 +64,17 @@ export default class TopicGalleryController extends Controller {
     }
   }
 
+  get hasFilters() {
+    return this.username || this.from_date || this.to_date;
+  }
+
+  @action
+  clearFilters() {
+    this.username = null;
+    this.from_date = null;
+    this.to_date = null;
+  }
+
   @action
   navigateToTopic(event) {
     event.preventDefault();

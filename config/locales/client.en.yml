@@ -12,3 +12,5 @@ en:
       from_date: "From:"
       to_date: "To:"
       gallery_button_title: "View topic gallery"
+      clear_filters: "Clear"
+      no_images_found: "No images found in this topic."
