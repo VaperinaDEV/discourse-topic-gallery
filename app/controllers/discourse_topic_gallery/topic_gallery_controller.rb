@@ -43,25 +43,51 @@ module DiscourseTopicGallery
         visible_posts = visible_posts.where("posts.created_at <= ?", to.end_of_day) if to
       end
 
-      visible_post_ids = visible_posts.pluck(:id).to_set
+      visible_posts_sub = visible_posts.select(:id)
 
-      all_uploads =
-        Upload
-          .joins(:posts)
-          .where(posts: { id: visible_post_ids })
-          .where("uploads.width IS NOT NULL AND uploads.height IS NOT NULL")
-          .distinct
+      # Get upload IDs with their earliest post_number for ordering
+      upload_post_refs =
+        UploadReference
+          .joins("INNER JOIN posts ON posts.id = upload_references.target_id")
+          .joins("INNER JOIN uploads ON uploads.id = upload_references.upload_id")
+          .where(target_type: "Post", target_id: visible_posts_sub)
+          .where.not(uploads: { width: nil })
+          .where.not(uploads: { height: nil })
+          .select("upload_references.upload_id", "MIN(posts.post_number) AS min_post_number")
+          .group("upload_references.upload_id")
+          .order("min_post_number ASC")
 
-      total = all_uploads.count
+      total = upload_post_refs.length
 
-      uploads =
-        all_uploads
-          .includes(:user, :optimized_images, :posts)
-          .order("posts.post_number ASC")
+      paginated_refs =
+        UploadReference
+          .from(upload_post_refs, :refs)
+          .select("refs.upload_id", "refs.min_post_number")
           .offset(page * PAGE_SIZE)
           .limit(PAGE_SIZE)
 
-      images = serialize_uploads(uploads.to_a, topic, visible_post_ids)
+      upload_ids = paginated_refs.map(&:upload_id)
+
+      uploads = Upload.where(id: upload_ids).includes(:user, :optimized_images).index_by(&:id)
+
+      # Get the post info for each upload (earliest visible post)
+      post_by_upload =
+        UploadReference
+          .joins("INNER JOIN posts ON posts.id = upload_references.target_id")
+          .where(upload_id: upload_ids, target_type: "Post")
+          .where(target_id: visible_posts_sub)
+          .select(
+            "DISTINCT ON (upload_references.upload_id) upload_references.upload_id",
+            "posts.id AS post_id",
+            "posts.post_number",
+          )
+          .order("upload_references.upload_id, posts.post_number ASC")
+          .index_by(&:upload_id)
+
+      # Maintain order from paginated_refs
+      ordered_uploads = upload_ids.filter_map { |id| uploads[id] }
+
+      images = serialize_uploads(ordered_uploads, topic, post_by_upload)
 
       render json: {
                title: topic.title,
@@ -95,9 +121,9 @@ module DiscourseTopicGallery
       scope
     end
 
-    def serialize_uploads(uploads, topic, visible_post_ids)
+    def serialize_uploads(uploads, topic, post_by_upload)
       uploads.map do |upload|
-        post = upload.posts.find { |p| p.topic_id == topic.id && visible_post_ids.include?(p.id) }
+        ref = post_by_upload[upload.id]
         thumb_w = upload.thumbnail_width || upload.width
         thumb_h = upload.thumbnail_height || upload.height
         optimized = OptimizedImage.create_for(upload, thumb_w, thumb_h)
@@ -113,9 +139,9 @@ module DiscourseTopicGallery
           filename: upload.original_filename,
           downloadUrl: upload.short_path,
           username: upload.user&.username,
-          postId: post&.id,
-          postNumber: post&.post_number,
-          postUrl: post ? "/t/#{topic.slug}/#{topic.id}/#{post.post_number}" : nil,
+          postId: ref&.post_id,
+          postNumber: ref&.post_number,
+          postUrl: ref ? "/t/#{topic.slug}/#{topic.id}/#{ref.post_number}" : nil,
         }
       end
     end
