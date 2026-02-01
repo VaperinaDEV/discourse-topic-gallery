@@ -67,7 +67,14 @@ module DiscourseTopicGallery
           )
           .order("posts.post_number ASC, upload_references.id ASC")
 
-      total = ordered_refs.length
+      total =
+        UploadReference
+          .joins("INNER JOIN posts ON posts.id = upload_references.target_id")
+          .joins("INNER JOIN uploads ON uploads.id = upload_references.upload_id")
+          .where(target_type: "Post", target_id: visible_posts_sub)
+          .where.not(uploads: { width: nil })
+          .where.not(uploads: { height: nil })
+          .count
 
       paginated_refs =
         UploadReference
