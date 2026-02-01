@@ -1,3 +1,5 @@
+@use "lib/viewport";
+
 .topic-gallery-page {
   max-width: 1400px;
   margin: 0 auto;
@@ -53,7 +55,7 @@
       flex: 1 1 100%;
       box-sizing: border-box;
 
-      @media screen and (width >= 768px) {
+      @include viewport.from(md) {
         flex: 0 1 auto;
       }
 
@@ -67,7 +69,7 @@
       .user-chooser {
         width: 100% !important;
 
-        @media screen and (width >= 768px) {
+        @include viewport.from(md) {
           min-width: 300px;
         }
       }
