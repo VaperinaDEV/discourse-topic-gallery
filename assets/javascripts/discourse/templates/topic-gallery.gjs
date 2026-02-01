@@ -3,7 +3,7 @@ import { on } from "@ember/modifier";
 import DButton from "discourse/components/d-button";
 import DatePicker from "discourse/components/date-picker";
 import icon from "discourse/helpers/d-icon";
-import UserChooser from "discourse/select-kit/components/email-group-user-chooser";
+import UserChooser from "discourse/select-kit/components/user-chooser";
 import { i18n } from "discourse-i18n";
 import TopicGalleryGrid from "../components/topic-gallery-grid";
 
@@ -40,7 +40,7 @@ import TopicGalleryGrid from "../components/topic-gallery-grid";
       <div class="control-unit">
         <label>{{i18n "discourse_topic_gallery.filter_by_user"}}</label>
         <UserChooser
-          @value={{@controller.username}}
+          @value={{if @controller.username @controller.username null}}
           @onChange={{@controller.updateUsername}}
           @options={{hash
             maximum=1
