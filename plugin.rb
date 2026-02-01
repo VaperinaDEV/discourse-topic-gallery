@@ -1,15 +1,16 @@
 # frozen_string_literal: true
 
 # name: discourse-topic-gallery
-# about: TODO
+# about: Adds a gallery view to topics.
 # meta_topic_id: TODO
 # version: 0.0.1
 # authors: Canapin & AI
-# url: TODO
+# url: https://github.com/Canapin/discourse-topic-gallery
 # required_version: 2.7.0
 
 enabled_site_setting :topic_gallery_enabled
 
+register_svg_icon "images"
 register_asset "stylesheets/topic-gallery.scss"
 
 module ::DiscourseTopicGallery
