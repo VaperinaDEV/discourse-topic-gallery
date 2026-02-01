@@ -6,7 +6,10 @@ describe "Topic Gallery", type: :system do
 
   let(:gallery_page) { PageObjects::Pages::TopicGallery.new }
 
-  before { SiteSetting.topic_gallery_enabled = true }
+  before do
+    SiteSetting.topic_gallery_enabled = true
+    SiteSetting.topic_gallery_allowed_groups = Group::AUTO_GROUPS[:everyone]
+  end
 
   it "displays the topic title on the gallery page" do
     sign_in(user)
