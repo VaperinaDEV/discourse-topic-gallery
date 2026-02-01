@@ -51,49 +51,37 @@ module DiscourseTopicGallery
 
       visible_posts_sub = visible_posts.select(:id)
 
-      # Get upload IDs with their earliest post_number for ordering
-      upload_post_refs =
+      # Get upload references ordered by post appearance then position within the post
+      ordered_refs =
         UploadReference
           .joins("INNER JOIN posts ON posts.id = upload_references.target_id")
           .joins("INNER JOIN uploads ON uploads.id = upload_references.upload_id")
           .where(target_type: "Post", target_id: visible_posts_sub)
           .where.not(uploads: { width: nil })
           .where.not(uploads: { height: nil })
-          .select("upload_references.upload_id", "MIN(posts.post_number) AS min_post_number")
-          .group("upload_references.upload_id")
-          .order("min_post_number ASC")
-
-      total = upload_post_refs.length
-
-      paginated_refs =
-        UploadReference
-          .from(upload_post_refs, :refs)
-          .select("refs.upload_id", "refs.min_post_number")
-          .offset(page * PAGE_SIZE)
-          .limit(PAGE_SIZE)
-
-      upload_ids = paginated_refs.map(&:upload_id)
-
-      uploads = Upload.where(id: upload_ids).includes(:user, :optimized_images).index_by(&:id)
-
-      # Get the post info for each upload (earliest visible post)
-      post_by_upload =
-        UploadReference
-          .joins("INNER JOIN posts ON posts.id = upload_references.target_id")
-          .where(upload_id: upload_ids, target_type: "Post")
-          .where(target_id: visible_posts_sub)
           .select(
-            "DISTINCT ON (upload_references.upload_id) upload_references.upload_id",
+            "upload_references.upload_id",
+            "upload_references.id AS ref_id",
             "posts.id AS post_id",
             "posts.post_number",
           )
-          .order("upload_references.upload_id, posts.post_number ASC")
-          .index_by(&:upload_id)
+          .order("posts.post_number ASC, upload_references.id ASC")
 
-      # Maintain order from paginated_refs
-      ordered_uploads = upload_ids.filter_map { |id| uploads[id] }
+      total = ordered_refs.length
 
-      images = serialize_uploads(ordered_uploads, topic, post_by_upload)
+      paginated_refs =
+        UploadReference
+          .from(ordered_refs, :refs)
+          .select("refs.upload_id", "refs.ref_id", "refs.post_id", "refs.post_number")
+          .offset(page * PAGE_SIZE)
+          .limit(PAGE_SIZE)
+
+      refs_array = paginated_refs.to_a
+      upload_ids = refs_array.map(&:upload_id)
+
+      uploads = Upload.where(id: upload_ids).includes(:user, :optimized_images).index_by(&:id)
+
+      images = serialize_uploads_from_refs(refs_array, uploads, topic)
 
       render json: {
                title: topic.title,
@@ -127,29 +115,34 @@ module DiscourseTopicGallery
       scope
     end
 
-    def serialize_uploads(uploads, topic, post_by_upload)
-      uploads.map do |upload|
-        ref = post_by_upload[upload.id]
-        thumb_w = upload.thumbnail_width || upload.width
-        thumb_h = upload.thumbnail_height || upload.height
-        optimized = OptimizedImage.create_for(upload, thumb_w, thumb_h)
-        thumbnail_raw_url = optimized&.url || upload.url
+    def serialize_uploads_from_refs(refs, uploads, topic)
+      refs
+        .map do |ref|
+          upload = uploads[ref.upload_id]
+          next unless upload
 
-        {
-          id: upload.id,
-          thumbnailUrl: UrlHelper.cook_url(thumbnail_raw_url, secure: upload.secure?, local: true),
-          url: UrlHelper.cook_url(upload.url, secure: upload.secure?, local: true),
-          width: upload.width,
-          height: upload.height,
-          filesize: upload.human_filesize,
-          filename: upload.original_filename,
-          downloadUrl: upload.short_path,
-          username: upload.user&.username,
-          postId: ref&.post_id,
-          postNumber: ref&.post_number,
-          postUrl: ref ? "/t/#{topic.slug}/#{topic.id}/#{ref.post_number}" : nil,
-        }
-      end
+          thumb_w = upload.thumbnail_width || upload.width
+          thumb_h = upload.thumbnail_height || upload.height
+          optimized = OptimizedImage.create_for(upload, thumb_w, thumb_h)
+          thumbnail_raw_url = optimized&.url || upload.url
+
+          {
+            id: upload.id,
+            thumbnailUrl:
+              UrlHelper.cook_url(thumbnail_raw_url, secure: upload.secure?, local: true),
+            url: UrlHelper.cook_url(upload.url, secure: upload.secure?, local: true),
+            width: upload.width,
+            height: upload.height,
+            filesize: upload.human_filesize,
+            filename: upload.original_filename,
+            downloadUrl: upload.short_path,
+            username: upload.user&.username,
+            postId: ref.post_id,
+            postNumber: ref.post_number,
+            postUrl: "/t/#{topic.slug}/#{topic.id}/#{ref.post_number}",
+          }
+        end
+        .compact
     end
   end
 end
