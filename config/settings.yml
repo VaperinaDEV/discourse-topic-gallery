@@ -1,10 +1,10 @@
 plugins:
   topic_gallery_enabled:
-    default: true
+    default: false
     client: false
   topic_gallery_allowed_groups:
     type: group_list
     list_type: compact
-    default: "0"
+    default: "1" # admin group
     allow_any: false
     refresh: true
