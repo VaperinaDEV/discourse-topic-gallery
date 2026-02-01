@@ -1,0 +1,29 @@
+import Component from "@glimmer/component";
+import { action } from "@ember/object";
+import { service } from "@ember/service";
+import DButton from "discourse/components/d-button";
+
+export default class PostMenuGalleryButton extends Component {
+  @service router;
+
+  @action
+  openGallery() {
+    const post = this.args.post;
+    const topic = post.topic;
+
+    this.router.transitionTo("topicGallery", topic.slug, topic.id, {
+      queryParams: { post_number: post.post_number },
+    });
+  }
+
+  <template>
+    <DButton
+      class="post-action-menu__gallery gallery"
+      ...attributes
+      @action={{this.openGallery}}
+      @icon="images"
+      @label={{if @showLabel "discourse_topic_gallery.gallery_button_label"}}
+      @title="discourse_topic_gallery.gallery_button_title"
+    />
+  </template>
+}

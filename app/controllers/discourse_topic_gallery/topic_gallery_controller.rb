@@ -25,6 +25,10 @@ module DiscourseTopicGallery
         visible_posts = visible_posts.where(user_id: filter_user.id) if filter_user
       end
 
+      if params[:post_number].present?
+        visible_posts = visible_posts.where("posts.post_number >= ?", params[:post_number].to_i)
+      end
+
       if params[:from_date].present?
         from =
           begin

@@ -6,6 +6,7 @@ export default class TopicGalleryRoute extends DiscourseRoute {
     username: { replace: true },
     from_date: { replace: true },
     to_date: { replace: true },
+    post_number: { replace: true },
   };
 
   async model(params) {
@@ -18,6 +19,9 @@ export default class TopicGalleryRoute extends DiscourseRoute {
     }
     if (params.to_date) {
       qp.set("to_date", params.to_date);
+    }
+    if (params.post_number) {
+      qp.set("post_number", params.post_number);
     }
     const qs = qp.toString();
     return await ajax(`/topic-gallery/${params.id}${qs ? `?${qs}` : ""}`);

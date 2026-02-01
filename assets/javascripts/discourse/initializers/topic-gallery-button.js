@@ -1,5 +1,6 @@
 import { getOwner } from "@ember/owner";
 import { withPluginApi } from "discourse/lib/plugin-api";
+import PostMenuGalleryButton from "../components/post-menu-gallery-button";
 
 const GALLERY_PRIORITY = 250;
 
@@ -27,6 +28,15 @@ export default {
           return this.currentUser?.can_view_topic_gallery;
         },
       });
+
+      api.registerValueTransformer(
+        "post-menu-buttons",
+        ({ value: dag, context: { buttonKeys } }) => {
+          dag.add("gallery", PostMenuGalleryButton, {
+            before: buttonKeys.SHOW_MORE,
+          });
+        }
+      );
     });
   },
 };

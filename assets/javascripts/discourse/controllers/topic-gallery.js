@@ -14,8 +14,9 @@ export default class TopicGalleryController extends Controller {
   @tracked username = null;
   @tracked from_date = null;
   @tracked to_date = null;
+  @tracked post_number = null;
   @tracked filtersVisible = false;
-  queryParams = ["username", "from_date", "to_date"];
+  queryParams = ["username", "from_date", "to_date", "post_number"];
 
   page = 0;
   topicId = null;
@@ -41,6 +42,9 @@ export default class TopicGalleryController extends Controller {
     }
     if (this.to_date) {
       params.set("to_date", this.to_date);
+    }
+    if (this.post_number) {
+      params.set("post_number", this.post_number);
     }
     const qs = params.toString();
     return `/topic-gallery/${this.topicId}${qs ? `?${qs}` : ""}`;
@@ -80,7 +84,7 @@ export default class TopicGalleryController extends Controller {
   }
 
   get hasFilters() {
-    return this.username || this.from_date || this.to_date;
+    return this.username || this.from_date || this.to_date || this.post_number;
   }
 
   @action
@@ -88,6 +92,7 @@ export default class TopicGalleryController extends Controller {
     this.username = null;
     this.from_date = null;
     this.to_date = null;
+    this.post_number = null;
     this.fetchImages();
   }
 
