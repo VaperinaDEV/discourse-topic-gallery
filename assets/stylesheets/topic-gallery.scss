@@ -37,10 +37,23 @@
       color: var(--primary-medium);
       white-space: nowrap;
     }
+
+    .toggle-filters-btn {
+      margin-left: auto;
+
+      @include viewport.from(md) {
+        display: none;
+      }
+
+      &.has-active-filters {
+        color: var(--tertiary);
+        border-color: var(--tertiary);
+      }
+    }
   }
 
   .admin-controls {
-    display: flex;
+    display: none;
     flex-wrap: wrap;
     gap: 20px;
     background: var(--primary-very-low);
@@ -50,6 +63,14 @@
     border-radius: 8px;
     align-items: baseline;
     box-sizing: border-box;
+
+    @include viewport.from(md) {
+      display: flex;
+    }
+
+    &.is-visible {
+      display: flex;
+    }
 
     .control-unit {
       flex: 1 1 100%;

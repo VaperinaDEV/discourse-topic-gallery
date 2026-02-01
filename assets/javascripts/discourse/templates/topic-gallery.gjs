@@ -1,4 +1,4 @@
-import { hash } from "@ember/helper";
+import { concat, hash } from "@ember/helper";
 import { on } from "@ember/modifier";
 import DButton from "discourse/components/d-button";
 import DatePicker from "discourse/components/date-picker";
@@ -21,8 +21,22 @@ import TopicGalleryGrid from "../components/topic-gallery-grid";
         -
         {{@controller.total}}
         {{i18n "discourse_topic_gallery.images"}}</span>
+      <DButton
+        @action={{@controller.toggleFilters}}
+        @icon={{if @controller.filtersVisible "chevron-up" "sliders"}}
+        @label="discourse_topic_gallery.filters_button"
+        class={{concat
+          "btn-default toggle-filters-btn"
+          (if @controller.hasFilters " has-active-filters")
+        }}
+      />
     </div>
-    <div class="admin-controls">
+    <div
+      class={{concat
+        "admin-controls"
+        (if @controller.filtersVisible " is-visible")
+      }}
+    >
       <div class="control-unit">
         <label>{{i18n "discourse_topic_gallery.filter_by_user"}}</label>
         <UserChooser

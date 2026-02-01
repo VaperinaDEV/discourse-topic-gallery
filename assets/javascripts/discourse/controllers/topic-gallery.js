@@ -14,6 +14,7 @@ export default class TopicGalleryController extends Controller {
   @tracked username = null;
   @tracked from_date = null;
   @tracked to_date = null;
+  @tracked filtersVisible = false;
   queryParams = ["username", "from_date", "to_date"];
 
   page = 0;
@@ -94,6 +95,11 @@ export default class TopicGalleryController extends Controller {
   navigateToTopic(event) {
     event.preventDefault();
     this.router.transitionTo(event.currentTarget.getAttribute("href"));
+  }
+
+  @action
+  toggleFilters() {
+    this.filtersVisible = !this.filtersVisible;
   }
 
   @action

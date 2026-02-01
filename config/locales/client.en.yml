@@ -13,5 +13,6 @@ en:
       to_date: "To:"
       gallery_button_label: "Gallery"
       gallery_button_title: "View topic gallery"
+      filters_button: "Filters"
       clear_filters: "Clear"
       no_images_found: "No images found in this topic."
