@@ -51,6 +51,17 @@ module DiscourseTopicGallery
 
       visible_posts_sub = visible_posts.select(:id)
 
+      # Exclude uploads that also have a non-Post reference (e.g. CustomEmoji,
+      # UserAvatar, ThemeField, etc.) — these are system/asset uploads that
+      # happen to appear in post content, not user-submitted images.
+      non_content_exclusion = <<~SQL
+        NOT EXISTS (
+          SELECT 1 FROM upload_references ur2
+          WHERE ur2.upload_id = upload_references.upload_id
+            AND ur2.target_type != 'Post'
+        )
+      SQL
+
       # Get upload references ordered by post appearance then position within the post
       ordered_refs =
         UploadReference
@@ -59,6 +70,7 @@ module DiscourseTopicGallery
           .where(target_type: "Post", target_id: visible_posts_sub)
           .where.not(uploads: { width: nil })
           .where.not(uploads: { height: nil })
+          .where(non_content_exclusion)
           .select(
             "upload_references.upload_id",
             "upload_references.id AS ref_id",
@@ -74,6 +86,7 @@ module DiscourseTopicGallery
           .where(target_type: "Post", target_id: visible_posts_sub)
           .where.not(uploads: { width: nil })
           .where.not(uploads: { height: nil })
+          .where(non_content_exclusion)
           .count
 
       paginated_refs =
