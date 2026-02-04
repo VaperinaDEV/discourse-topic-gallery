@@ -2,6 +2,7 @@ import { concat, hash } from "@ember/helper";
 import { on } from "@ember/modifier";
 import DButton from "discourse/components/d-button";
 import DatePicker from "discourse/components/date-picker";
+import replaceEmoji from "discourse/helpers/replace-emoji";
 import icon from "discourse/helpers/d-icon";
 import UserChooser from "discourse/select-kit/components/user-chooser";
 import { i18n } from "discourse-i18n";
@@ -15,7 +16,7 @@ import TopicGalleryGrid from "../components/topic-gallery-grid";
           href="/t/{{@model.slug}}/{{@model.id}}"
           class="topic-back-link"
           {{on "click" @controller.navigateToTopic}}
-        >{{icon "chevron-left"}}{{@model.title}}</a>
+        >{{icon "chevron-left"}}{{replaceEmoji (@model.title)}}</a>
       </h1>
       <span class="image-count-badge">
         ~ {{@controller.total}}
