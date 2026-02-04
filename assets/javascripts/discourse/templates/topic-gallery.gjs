@@ -20,7 +20,7 @@ import TopicGalleryGrid from "../components/topic-gallery-grid";
         >{{icon "chevron-left"}}{{replaceEmoji (htmlSafe @model.title)}}</a>
       </h1>
       <span class="image-count-badge">
-        ~ {{@controller.total}}
+        ~{{@controller.total}}
         {{i18n "discourse_topic_gallery.images"}}
       </span>
       <DButton
