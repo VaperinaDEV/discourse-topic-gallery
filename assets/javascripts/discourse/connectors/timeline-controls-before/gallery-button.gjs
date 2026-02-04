@@ -19,7 +19,7 @@ export default class GalleryTimelineButton extends Component {
         @action={{this.openGallery}}
         @icon="images"
         @title="discourse_topic_gallery.gallery_button_title"
-        class="btn-default gallery-link-btn"
+        class="icon btn-default gallery-link-btn"
       />
     {{/if}}
   </template>
