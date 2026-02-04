@@ -51,9 +51,7 @@ module DiscourseTopicGallery
 
       visible_posts_sub = visible_posts.select(:id)
 
-      # Exclude uploads that also have a non-Post reference (e.g. CustomEmoji,
-      # UserAvatar, ThemeField, etc.) — these are system/asset uploads that
-      # happen to appear in post content, not user-submitted images.
+      # Exclude uploads that also have a non-Post reference
       non_content_exclusion = <<~SQL
         NOT EXISTS (
           SELECT 1 FROM upload_references ur2
@@ -62,10 +60,11 @@ module DiscourseTopicGallery
         )
       SQL
 
-      # Single query: fetch paginated refs with total via window function
+      # MODIFIED QUERY: Joining users table to get the author of the post
       refs_with_total =
         UploadReference
           .joins("INNER JOIN posts ON posts.id = upload_references.target_id")
+          .joins("INNER JOIN users ON users.id = posts.user_id") # Join the post author
           .joins("INNER JOIN uploads ON uploads.id = upload_references.upload_id")
           .where(target_type: "Post", target_id: visible_posts_sub)
           .where.not(uploads: { width: nil })
@@ -76,6 +75,7 @@ module DiscourseTopicGallery
             "upload_references.id AS ref_id",
             "posts.id AS post_id",
             "posts.post_number",
+            "users.username AS poster_username", # Selecting username from the joined users table
             "COUNT(*) OVER() AS total_count",
           )
           .order("posts.post_number ASC, upload_references.id ASC")
@@ -86,7 +86,8 @@ module DiscourseTopicGallery
       total = refs_array.first&.total_count.to_i
       upload_ids = refs_array.map(&:upload_id)
 
-      uploads = Upload.where(id: upload_ids).includes(:user, :optimized_images).index_by(&:id)
+      # Loading uploads with optimized images
+      uploads = Upload.where(id: upload_ids).includes(:optimized_images).index_by(&:id)
 
       images = serialize_uploads_from_refs(refs_array, uploads, topic)
 
@@ -123,40 +124,35 @@ module DiscourseTopicGallery
     end
 
     def serialize_uploads_from_refs(refs, uploads, topic)
-      refs
-        .map do |ref|
-          upload = uploads[ref.upload_id]
-          next unless upload
+      refs.map do |ref|
+        upload = uploads[ref.upload_id]
+        next unless upload
 
-          thumb_w = upload.thumbnail_width || upload.width
-          thumb_h = upload.thumbnail_height || upload.height
-          ext = ".#{upload.extension}"
+        thumb_w = upload.thumbnail_width || upload.width
+        thumb_h = upload.thumbnail_height || upload.height
+        ext = ".#{upload.extension}"
 
-          # Use preloaded optimized_images to avoid per-row queries
-          optimized =
-            upload.optimized_images.detect do |oi|
-              oi.width == thumb_w && oi.height == thumb_h && oi.extension == ext
-            end
-          optimized ||= OptimizedImage.create_for(upload, thumb_w, thumb_h)
-          thumbnail_raw_url = optimized&.url || upload.url
-
-          {
-            id: upload.id,
-            thumbnailUrl:
-              UrlHelper.cook_url(thumbnail_raw_url, secure: upload.secure?, local: true),
-            url: UrlHelper.cook_url(upload.url, secure: upload.secure?, local: true),
-            width: upload.width,
-            height: upload.height,
-            filesize: upload.human_filesize,
-            filename: upload.original_filename,
-            downloadUrl: upload.short_path,
-            username: upload.user&.username,
-            postId: ref.post_id,
-            postNumber: ref.post_number,
-            postUrl: "/t/#{topic.slug}/#{topic.id}/#{ref.post_number}",
-          }
+        optimized = upload.optimized_images.detect do |oi|
+          oi.width == thumb_w && oi.height == thumb_h && oi.extension == ext
         end
-        .compact
+        optimized ||= OptimizedImage.create_for(upload, thumb_w, thumb_h)
+        thumbnail_raw_url = optimized&.url || upload.url
+
+        {
+          id: upload.id,
+          thumbnailUrl: UrlHelper.cook_url(thumbnail_raw_url, secure: upload.secure?, local: true),
+          url: UrlHelper.cook_url(upload.url, secure: upload.secure?, local: true),
+          width: upload.width,
+          height: upload.height,
+          filesize: upload.human_filesize,
+          filename: upload.original_filename,
+          downloadUrl: upload.short_path,
+          username: ref.poster_username, # Use the username from the join, not from upload.user
+          postId: ref.post_id,
+          postNumber: ref.post_number,
+          postUrl: "/t/#{topic.slug}/#{topic.id}/#{ref.post_number}",
+        }
+      end.compact
     end
   end
 end
