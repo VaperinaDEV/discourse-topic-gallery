@@ -20,7 +20,6 @@ module DiscourseTopicGallery
       page = [params[:page].to_i, 0].max
       visible_posts = visible_posts_scope(topic)
 
-      # Filtering by username/date remains the same
       if params[:username].present?
         filter_user = User.find_by_username(params[:username])
         visible_posts = visible_posts.where(user_id: filter_user.id) if filter_user
@@ -30,7 +29,6 @@ module DiscourseTopicGallery
         visible_posts = visible_posts.where("posts.post_number >= ?", params[:post_number].to_i)
       end
 
-      # ... (dates filters omitted for brevity, same as your code) ...
       if params[:from_date].present?
         from = begin Date.parse(params[:from_date]) rescue nil end
         visible_posts = visible_posts.where("posts.created_at >= ?", from.beginning_of_day) if from
@@ -42,23 +40,20 @@ module DiscourseTopicGallery
 
       visible_posts_sub = visible_posts.select(:id)
 
-      # MODIFIED QUERY: 
-      # 1. Removed 'non_content_exclusion' because it broke Grid Galleries.
-      # 2. Added size filtering (> 100px) to automatically kill Onebox favicons/logos.
-      # 3. Attributes images to the actual poster in this topic.
       refs_with_total =
         UploadReference
           .joins("INNER JOIN posts ON posts.id = upload_references.target_id")
           .joins("INNER JOIN users ON users.id = posts.user_id")
           .joins("INNER JOIN uploads ON uploads.id = upload_references.upload_id")
           .where(target_type: "Post", target_id: visible_posts_sub)
-          .where("uploads.width > 100 AND uploads.height > 100") # KILL ONEBOX GARBAGE
-          .where("uploads.extension NOT IN ('ico', 'svg')")     # KILL ICONS
+          .where("uploads.width > 100 AND uploads.height > 100")
+          .where("uploads.extension NOT IN ('ico', 'svg')")
           .select(
             "upload_references.upload_id",
             "upload_references.id AS ref_id",
             "posts.id AS post_id",
             "posts.post_number",
+            "posts.cooked AS post_cooked", # Needed to check for Onebox classes
             "users.username AS poster_username",
             "COUNT(*) OVER() AS total_count",
           )
@@ -102,6 +97,21 @@ module DiscourseTopicGallery
       refs.map do |ref|
         upload = uploads[ref.upload_id]
         next unless upload
+
+        # ONEBOX EXCLUSION LOGIC
+        # We parse the HTML of the post to see where this image is located.
+        doc = Nokogiri::HTML5.fragment(ref.post_cooked)
+        
+        # Find the image or a link containing the image short URL or full URL
+        # Discourse uses the upload's short_url (upload://...) or full URL in the cooked HTML.
+        search_term = upload.short_url || upload.url
+        img_node = doc.at_css("img[src*='#{upload.sha1}'], img[src*='#{upload.id}']")
+        
+        if img_node
+          # Check if any parent has the onebox or video-thumbnail class
+          is_onebox = img_node.ancestors(".onebox, .onebox-body, .video-thumbnail, .video-container").any?
+          next if is_onebox # Skip this image if it's inside a Onebox
+        end
 
         thumb_w = upload.thumbnail_width || upload.width
         thumb_h = upload.thumbnail_height || upload.height
