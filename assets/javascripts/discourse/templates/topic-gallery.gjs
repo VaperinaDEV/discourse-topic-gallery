@@ -18,9 +18,9 @@ import TopicGalleryGrid from "../components/topic-gallery-grid";
         >{{icon "chevron-left"}}{{@model.title}}</a>
       </h1>
       <span class="image-count-badge">
-        -
-        {{@controller.total}}
-        {{i18n "discourse_topic_gallery.images"}}</span>
+        ~ {{@controller.total}}
+        {{i18n "discourse_topic_gallery.images"}}
+      </span>
       <DButton
         @action={{@controller.toggleFilters}}
         @icon={{if @controller.filtersVisible "chevron-up" "sliders"}}
