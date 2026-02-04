@@ -20,6 +20,7 @@ module DiscourseTopicGallery
       page = [params[:page].to_i, 0].max
       visible_posts = visible_posts_scope(topic)
 
+      # Filtering by username/date remains the same
       if params[:username].present?
         filter_user = User.find_by_username(params[:username])
         visible_posts = visible_posts.where(user_id: filter_user.id) if filter_user
@@ -29,53 +30,36 @@ module DiscourseTopicGallery
         visible_posts = visible_posts.where("posts.post_number >= ?", params[:post_number].to_i)
       end
 
+      # ... (dates filters omitted for brevity, same as your code) ...
       if params[:from_date].present?
-        from =
-          begin
-            Date.parse(params[:from_date])
-          rescue StandardError
-            nil
-          end
+        from = begin Date.parse(params[:from_date]) rescue nil end
         visible_posts = visible_posts.where("posts.created_at >= ?", from.beginning_of_day) if from
       end
-
       if params[:to_date].present?
-        to =
-          begin
-            Date.parse(params[:to_date])
-          rescue StandardError
-            nil
-          end
+        to = begin Date.parse(params[:to_date]) rescue nil end
         visible_posts = visible_posts.where("posts.created_at <= ?", to.end_of_day) if to
       end
 
       visible_posts_sub = visible_posts.select(:id)
 
-      # Exclude uploads that also have a non-Post reference
-      non_content_exclusion = <<~SQL
-        NOT EXISTS (
-          SELECT 1 FROM upload_references ur2
-          WHERE ur2.upload_id = upload_references.upload_id
-            AND ur2.target_type != 'Post'
-        )
-      SQL
-
-      # MODIFIED QUERY: Joining users table to get the author of the post
+      # MODIFIED QUERY: 
+      # 1. Removed 'non_content_exclusion' because it broke Grid Galleries.
+      # 2. Added size filtering (> 100px) to automatically kill Onebox favicons/logos.
+      # 3. Attributes images to the actual poster in this topic.
       refs_with_total =
         UploadReference
           .joins("INNER JOIN posts ON posts.id = upload_references.target_id")
-          .joins("INNER JOIN users ON users.id = posts.user_id") # Join the post author
+          .joins("INNER JOIN users ON users.id = posts.user_id")
           .joins("INNER JOIN uploads ON uploads.id = upload_references.upload_id")
           .where(target_type: "Post", target_id: visible_posts_sub)
-          .where.not(uploads: { width: nil })
-          .where.not(uploads: { height: nil })
-          .where(non_content_exclusion)
+          .where("uploads.width > 100 AND uploads.height > 100") # KILL ONEBOX GARBAGE
+          .where("uploads.extension NOT IN ('ico', 'svg')")     # KILL ICONS
           .select(
             "upload_references.upload_id",
             "upload_references.id AS ref_id",
             "posts.id AS post_id",
             "posts.post_number",
-            "users.username AS poster_username", # Selecting username from the joined users table
+            "users.username AS poster_username",
             "COUNT(*) OVER() AS total_count",
           )
           .order("posts.post_number ASC, upload_references.id ASC")
@@ -86,9 +70,7 @@ module DiscourseTopicGallery
       total = refs_array.first&.total_count.to_i
       upload_ids = refs_array.map(&:upload_id)
 
-      # Loading uploads with optimized images
       uploads = Upload.where(id: upload_ids).includes(:optimized_images).index_by(&:id)
-
       images = serialize_uploads_from_refs(refs_array, uploads, topic)
 
       render json: {
@@ -108,18 +90,11 @@ module DiscourseTopicGallery
       allowed_types = [Post.types[:regular]]
       allowed_types << Post.types[:whisper] if guardian.can_see_whispers?
 
-      scope =
-        Post
-          .where(topic_id: topic.id)
-          .where(deleted_at: nil)
-          .where(hidden: false)
-          .where(post_type: allowed_types)
-
+      scope = Post.where(topic_id: topic.id).where(deleted_at: nil).where(hidden: false).where(post_type: allowed_types)
       if current_user
         ignored_ids = IgnoredUser.where(user_id: current_user.id).select(:ignored_user_id)
         scope = scope.where.not(user_id: ignored_ids)
       end
-
       scope
     end
 
@@ -147,7 +122,7 @@ module DiscourseTopicGallery
           filesize: upload.human_filesize,
           filename: upload.original_filename,
           downloadUrl: upload.short_path,
-          username: ref.poster_username, # Use the username from the join, not from upload.user
+          username: ref.poster_username, 
           postId: ref.post_id,
           postNumber: ref.post_number,
           postUrl: "/t/#{topic.slug}/#{topic.id}/#{ref.post_number}",
