@@ -1,5 +1,6 @@
 import { concat, hash } from "@ember/helper";
 import { on } from "@ember/modifier";
+import { htmlSafe } from "@ember/template";
 import DButton from "discourse/components/d-button";
 import DatePicker from "discourse/components/date-picker";
 import replaceEmoji from "discourse/helpers/replace-emoji";
@@ -16,7 +17,7 @@ import TopicGalleryGrid from "../components/topic-gallery-grid";
           href="/t/{{@model.slug}}/{{@model.id}}"
           class="topic-back-link"
           {{on "click" @controller.navigateToTopic}}
-        >{{icon "chevron-left"}}{{replaceEmoji (@model.title)}}</a>
+        >{{icon "chevron-left"}}{{replaceEmoji (htmlSafe @model.title)}}</a>
       </h1>
       <span class="image-count-badge">
         ~ {{@controller.total}}
