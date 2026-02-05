@@ -165,7 +165,6 @@ export default class TopicGalleryGrid extends Component {
                   data-user-card={{image.username}}
                   class="mention"
                 >@{{image.username}}</a>
-                &nbsp;-&nbsp;
                 <a
                   href={{image.postUrl}}
                   class="gallery-post-link"
